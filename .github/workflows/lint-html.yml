@@ -1,6 +1,6 @@
 name: Lint PL HTML Files
 
-on:
+'on':
   workflow_dispatch:  # Allow manual triggering
   push:
     branches:
