@@ -125,6 +125,17 @@ def main():
     # Get the repository root directory
     repo_root = os.getenv("GITHUB_WORKSPACE", ".")
     
+    # Check if we're in test mode
+    test_mode = os.getenv("TEST_MODE", "").lower() in ["true", "1", "yes"]
+    expected_failures_str = os.getenv("EXPECTED_FAILURES", "")
+    expected_failures = set()
+    
+    if test_mode and expected_failures_str:
+        # Parse expected failures (comma-separated list of filenames)
+        expected_failures = set(f.strip() for f in expected_failures_str.split(",") if f.strip())
+        print(f"🧪 TEST MODE: Expecting these files to fail: {', '.join(sorted(expected_failures))}")
+        print()
+    
     print(f"Scanning for HTML files in: {repo_root}")
     html_files = find_html_files(repo_root)
     
@@ -137,13 +148,18 @@ def main():
         print(f"  - {f}")
     print()
     
-    has_errors = False
+    # Track results
+    results = {}
+    
     for file_path in html_files:
         print(f"Linting: {file_path}")
         errors = lint_file(file_path)
         
+        # Get just the filename for comparison
+        filename = os.path.basename(file_path)
+        results[filename] = {"has_errors": bool(errors), "errors": errors}
+        
         if errors:
-            has_errors = True
             print(f"  ❌ FAILED with {len(errors)} error(s):")
             for error in errors:
                 print(f"    - {error}")
@@ -151,12 +167,49 @@ def main():
             print(f"  ✓ PASSED")
         print()
     
-    if has_errors:
-        print("❌ Linting failed! Please fix the errors above.")
-        return 1
+    # Determine overall pass/fail based on mode
+    if test_mode:
+        # In test mode: verify that expected failures actually fail
+        # and files not in expected failures pass
+        test_passed = True
+        
+        print("=" * 60)
+        print("TEST MODE VALIDATION")
+        print("=" * 60)
+        
+        for filename, result in sorted(results.items()):
+            should_fail = filename in expected_failures
+            did_fail = result["has_errors"]
+            
+            if should_fail and did_fail:
+                print(f"✓ {filename}: Correctly detected as INVALID")
+            elif not should_fail and not did_fail:
+                print(f"✓ {filename}: Correctly detected as VALID")
+            elif should_fail and not did_fail:
+                print(f"✗ {filename}: Expected to FAIL but PASSED")
+                test_passed = False
+            else:  # not should_fail and did_fail
+                print(f"✗ {filename}: Expected to PASS but FAILED")
+                test_passed = False
+        
+        print("=" * 60)
+        
+        if test_passed:
+            print("✓ Test mode: All validations passed!")
+            return 0
+        else:
+            print("❌ Test mode: Some validations failed!")
+            return 1
     else:
-        print("✓ All files passed linting!")
-        return 0
+        # Normal mode: all files must pass
+        has_errors = any(result["has_errors"] for result in results.values())
+        
+        if has_errors:
+            print("❌ Linting failed! Please fix the errors above.")
+            return 1
+        else:
+            print("✓ All files passed linting!")
+            return 0
 
 
 if __name__ == "__main__":

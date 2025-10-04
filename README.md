@@ -16,19 +16,78 @@ The linter checks HTML files for:
 
 3. **Extensible Framework**: Additional custom validation rules can be easily added
 
-## Automated Linting
+## Using the Reusable Workflow
 
-The linter runs automatically via GitHub Actions on:
-- Manual workflow dispatch
-- Push to the `main` branch
-- Pull requests to the `main` branch
+This repository provides a **reusable GitHub Actions workflow** that can be called from other repositories containing PrairieLearn content.
+
+### In Your Repository
+
+To use the linter in your own repository, create a workflow file (e.g., `.github/workflows/lint-html.yml`):
+
+```yaml
+name: Lint HTML Files
+
+'on':
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    uses: ucsb-cs/pl-linter/.github/workflows/lint-html.yml@main
+```
+
+This will automatically lint all HTML files in your repository and fail the workflow if any errors are found.
+
+### In This Repository (Test Mode)
+
+This repository uses a special test mode to validate that the linter correctly detects errors. The workflow in this repo expects certain files to fail:
+
+```yaml
+name: Test Linter
+
+'on':
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-lint:
+    uses: ./.github/workflows/lint-html.yml
+    with:
+      test-mode: true
+      expected-failures: 'example_invalid.html,example_pl_invalid.html'
+```
+
+In test mode:
+- Files listed in `expected-failures` must fail linting (to verify error detection works)
+- All other files must pass linting
+- The workflow succeeds only if this behavior is correct
 
 ## Running Locally
 
-To run the linter locally:
+### Normal Mode
+
+To run the linter locally in normal mode (all files must pass):
 
 ```bash
 python3 lint_html.py
+```
+
+### Test Mode
+
+To run the linter in test mode (for testing the linter itself):
+
+```bash
+TEST_MODE=true EXPECTED_FAILURES="example_invalid.html,example_pl_invalid.html" python3 lint_html.py
 ```
 
 The script will:
@@ -39,8 +98,13 @@ The script will:
 
 ## Exit Codes
 
+**Normal Mode:**
 - `0`: All files passed linting
 - `1`: One or more files failed linting
+
+**Test Mode:**
+- `0`: Files that should fail did fail, and files that should pass did pass
+- `1`: Unexpected pass/fail results
 
 ## Example Files
 
