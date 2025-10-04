@@ -11,7 +11,10 @@ The linter checks HTML files for:
    - Properly nested elements
    - Correct attribute syntax
 
-2. **Custom PL Rules**: Framework for adding PrairieLearn-specific validation rules (extensible)
+2. **PrairieLearn-Specific Rules**:
+   - `<pl-multiple-choice>` elements must be the root element of the document (not nested inside any other element)
+
+3. **Extensible Framework**: Additional custom validation rules can be easily added
 
 ## Automated Linting
 
@@ -38,6 +41,15 @@ The script will:
 
 - `0`: All files passed linting
 - `1`: One or more files failed linting
+
+## Example Files
+
+The repository includes example HTML files to demonstrate the linter's functionality:
+
+- `example.html` - A valid HTML file that passes all checks
+- `example_invalid.html` - An invalid HTML file with mismatched tags (XML syntax error)
+- `example_pl_valid.html` - A valid PrairieLearn file with `<pl-multiple-choice>` as root element
+- `example_pl_invalid.html` - An invalid PrairieLearn file with nested `<pl-multiple-choice>` element
 
 ## Requirements
 

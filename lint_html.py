@@ -61,8 +61,44 @@ def check_custom_rules(file_path):
     """
     errors = []
     
-    # Placeholder for custom rules
-    # Add specific rule checks here as they are defined
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Try to parse the file as XML
+        try:
+            tree = ET.fromstring(content)
+        except ET.ParseError:
+            # If XML parsing fails, we can't check custom rules
+            # The XML syntax error will be caught by check_xml_syntax
+            return errors
+        
+        # Rule: <pl-multiple-choice> must NOT be nested inside another element
+        # It must be the root element (have no parent)
+        def check_pl_multiple_choice_nesting(element, is_root=True):
+            """Recursively check if pl-multiple-choice is properly placed."""
+            local_errors = []
+            
+            if element.tag == 'pl-multiple-choice' and not is_root:
+                # pl-multiple-choice found but it's not the root element
+                local_errors.append(
+                    f"<pl-multiple-choice> element must not be nested inside other elements. "
+                    f"It must be the root element of the document."
+                )
+            
+            # Recursively check children (they are not root)
+            for child in element:
+                local_errors.extend(check_pl_multiple_choice_nesting(child, False))
+            
+            return local_errors
+        
+        # Check the rule starting from the root
+        errors.extend(check_pl_multiple_choice_nesting(tree, True))
+    
+    except FileNotFoundError:
+        errors.append(f"File not found: {file_path}")
+    except Exception as e:
+        errors.append(f"Error checking custom rules: {str(e)}")
     
     return errors
 
