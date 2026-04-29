@@ -3,15 +3,25 @@
 Linter for PL HTML files.
 
 This script checks HTML files for:
-1. General XML syntax (proper tags, nesting, attributes)
+1. HTML/template syntax using djlint (mustache template aware)
 2. Custom PL-specific rules (extensible)
 """
 
 import sys
 import os
 import glob
+import re
+import subprocess
 from xml.etree import ElementTree as ET
-from pathlib import Path
+
+
+# djlint rules that are not applicable to PrairieLearn HTML fragments:
+#   H005 - html tag lang attribute (fragments don't need it)
+#   H007 - DOCTYPE declaration (fragments don't need it)
+#   H030 - meta description (fragments don't need it)
+#   H031 - meta keywords (fragments don't need it)
+#   T001 - mustache variable whitespace style (cosmetic, not an error)
+_DJLINT_IGNORE = "H005,H007,H030,H031,T001"
 
 
 def find_html_files(root_dir="."):
@@ -25,110 +35,143 @@ def find_html_files(root_dir="."):
     return sorted(html_files)
 
 
-def check_xml_syntax(file_path):
+def check_with_djlint(file_path):
     """
-    Check if the HTML file has valid XML syntax.
-    This includes:
-    - Properly formatted tags
-    - Properly nested elements
-    - Correct attribute syntax
+    Check HTML file using djlint with mustache profile.
+
+    djlint understands mustache template syntax ({{ ... }}) so it will not
+    report false positives caused by template expressions in PrairieLearn
+    question files.
     """
     errors = []
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Wrap content in a dummy root element to handle question.html files
-        # that may have multiple top-level elements (no single document root).
-        # The unique tag name avoids collisions with real content.
-        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
 
-        # Try to parse as XML
-        try:
-            ET.fromstring(wrapped)
-        except ET.ParseError as e:
-            errors.append(f"XML syntax error: {str(e)}")
-    
+    try:
+        result = subprocess.run(
+            [
+                "djlint",
+                "--lint",
+                "--profile", "mustache",
+                "--ignore", _DJLINT_IGNORE,
+                file_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        # djlint exits with 1 when lint errors are found, 0 when clean.
+        # Any other exit code means djlint itself failed to run.
+        if result.returncode not in (0, 1):
+            errors.append(f"djlint failed to run: {result.stderr.strip()}")
+            return errors
+
+        # Extract error lines from stdout.
+        # djlint error lines match: CODE LINE:COL description
+        error_pattern = re.compile(r"^[A-Z]\d+\s+\d+:\d+\s+.+")
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if error_pattern.match(line):
+                errors.append(f"djlint: {line}")
+
     except FileNotFoundError:
-        errors.append(f"File not found: {file_path}")
+        errors.append(
+            "djlint is not installed. Please install it with: pip install djlint"
+        )
     except Exception as e:
-        errors.append(f"Error reading file: {str(e)}")
-    
+        errors.append(f"Error running djlint: {str(e)}")
+
     return errors
+
+
+def _strip_mustache(content):
+    """
+    Remove mustache/handlebars template expressions from HTML content.
+
+    This allows the remaining markup to be parsed as XML for structural
+    rule checks without mustache syntax causing spurious parse errors.
+    """
+    # Strip triple-mustache first (unescaped output): {{{ ... }}}
+    content = re.sub(r"\{\{\{.*?\}\}\}", "", content, flags=re.DOTALL)
+    # Strip double-mustache: {{ ... }}
+    content = re.sub(r"\{\{.*?\}\}", "", content, flags=re.DOTALL)
+    return content
 
 
 def check_custom_rules(file_path):
     """
     Check custom PL-specific rules.
-    
+
     This function can be extended with additional rules as needed.
+    Mustache template expressions are stripped before XML parsing so that
+    files containing {{ ... }} syntax are handled correctly.
     """
     errors = []
-    
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
+        # Strip mustache expressions so XML parsing succeeds on template files.
+        clean_content = _strip_mustache(content)
+
         # Wrap content in a dummy root element to handle question.html files
         # that may have multiple top-level elements (no single document root).
         # The unique tag name avoids collisions with real content.
-        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
+        wrapped = f"<pl-linter-root>{clean_content}</pl-linter-root>"
 
         # Try to parse the file as XML
         try:
             tree = ET.fromstring(wrapped)
         except ET.ParseError:
-            # If XML parsing fails, we can't check custom rules
-            # The XML syntax error will be caught by check_xml_syntax
+            # If XML parsing fails, we can't check custom rules.
+            # The structural error will be caught by check_with_djlint.
             return errors
-        
+
         # Rule: <pl-multiple-choice> must NOT be nested inside another element
         # It must be a top-level element of the document (not nested)
         def check_pl_multiple_choice_nesting(element, is_top_level=True):
             """Recursively check if pl-multiple-choice is properly placed."""
             local_errors = []
-            
+
             if element.tag == 'pl-multiple-choice' and not is_top_level:
                 # pl-multiple-choice found but it's not a top-level element
                 local_errors.append(
-                    f"<pl-multiple-choice> element must not be nested inside other elements. "
-                    f"It must be a top-level element of the document."
+                    "<pl-multiple-choice> element must not be nested inside other elements. "
+                    + "It must be a top-level element of the document."
                 )
-            
+
             # Recursively check children (they are not top-level)
             for child in element:
                 local_errors.extend(check_pl_multiple_choice_nesting(child, False))
-            
+
             return local_errors
-        
+
         # The dummy wrapper's direct children are the real top-level elements,
         # so treat each of them as top-level when checking nesting rules.
         for top_level in tree:
             errors.extend(check_pl_multiple_choice_nesting(top_level, True))
-    
+
     except FileNotFoundError:
         errors.append(f"File not found: {file_path}")
     except Exception as e:
         errors.append(f"Error checking custom rules: {str(e)}")
-    
+
     return errors
 
 
 def lint_file(file_path):
     """Lint a single HTML file."""
     all_errors = []
-    
-    # Check XML syntax
-    syntax_errors = check_xml_syntax(file_path)
+
+    # Check HTML/template syntax with djlint (mustache aware)
+    syntax_errors = check_with_djlint(file_path)
     if syntax_errors:
         all_errors.extend(syntax_errors)
-    
-    # Check custom rules
+
+    # Check custom PL-specific rules
     custom_errors = check_custom_rules(file_path)
     if custom_errors:
         all_errors.extend(custom_errors)
-    
+
     return all_errors
 
 

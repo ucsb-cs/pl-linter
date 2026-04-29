@@ -36,6 +36,9 @@ jobs:
         with:
           python-version: '3.x'
       
+      - name: Install dependencies
+        run: pip install -r .pl-linter/requirements.txt
+      
       - name: Run HTML linter
         env:
           TEST_MODE: ${{ inputs.test-mode }}
