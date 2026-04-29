@@ -127,29 +127,31 @@ def check_custom_rules(file_path):
             # The structural error will be caught by check_with_djlint.
             return errors
 
-        # Rule: <pl-multiple-choice> must NOT be nested inside another element
-        # It must be a top-level element of the document (not nested)
-        def check_pl_multiple_choice_nesting(element, is_top_level=True):
-            """Recursively check if pl-multiple-choice is properly placed."""
-            local_errors = []
+        # Rule: <pl-multiple-choice> must NOT be nested inside any element whose
+        # tag starts with 'pl-'.  Non-PL ancestors (e.g. <div>, <section>) are
+        # fine.  For every pl-multiple-choice found in the tree, walk up its
+        # ancestor chain; if any ancestor has a tag that starts with 'pl-',
+        # report an error naming that ancestor.
 
-            if element.tag == 'pl-multiple-choice' and not is_top_level:
-                # pl-multiple-choice found but it's not a top-level element
-                local_errors.append(
-                    "<pl-multiple-choice> element must not be nested inside other elements. "
-                    + "It must be a top-level element of the document."
-                )
+        # Build a child -> parent map across the whole tree.
+        parent_map = {
+            child: parent
+            for parent in tree.iter()
+            for child in parent
+        }
 
-            # Recursively check children (they are not top-level)
-            for child in element:
-                local_errors.extend(check_pl_multiple_choice_nesting(child, False))
-
-            return local_errors
-
-        # The dummy wrapper's direct children are the real top-level elements,
-        # so treat each of them as top-level when checking nesting rules.
-        for top_level in tree:
-            errors.extend(check_pl_multiple_choice_nesting(top_level, True))
+        for elem in tree.iter('pl-multiple-choice'):
+            ancestor = parent_map.get(elem)
+            while ancestor is not None:
+                # Skip the synthetic wrapper element added above.
+                if ancestor.tag != 'pl-linter-root' and ancestor.tag.startswith('pl-'):
+                    errors.append(
+                        f"<pl-multiple-choice> must not be nested inside a "
+                        f"<{ancestor.tag}> element "
+                        f"(ancestor element has a tag starting with 'pl-')."
+                    )
+                    break
+                ancestor = parent_map.get(ancestor)
 
     except FileNotFoundError:
         errors.append(f"File not found: {file_path}")
