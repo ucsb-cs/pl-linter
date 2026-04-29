@@ -21,10 +21,18 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      
+      - name: Checkout linter script
+        uses: actions/checkout@v6
+        with:
+          repository: ucsb-cs/pl-linter
+          path: .pl-linter
+          sparse-checkout: lint_html.py
+          sparse-checkout-cone-mode: false
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       
@@ -32,4 +40,4 @@ jobs:
         env:
           TEST_MODE: ${{ inputs.test-mode }}
           EXPECTED_FAILURES: ${{ inputs.expected-failures }}
-        run: python3 lint_html.py
+        run: python3 .pl-linter/lint_html.py
