@@ -93,7 +93,7 @@ def check_custom_rules(file_path):
                 # pl-multiple-choice found but it's not a top-level element
                 local_errors.append(
                     f"<pl-multiple-choice> element must not be nested inside other elements. "
-                    f"It must be the root element of the document."
+                    f"It must be a top-level element of the document."
                 )
             
             # Recursively check children (they are not top-level)
