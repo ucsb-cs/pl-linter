@@ -39,9 +39,13 @@ def check_xml_syntax(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Wrap content in a dummy root element to handle question.html files
+        # that may have multiple top-level elements (no single document root).
+        wrapped = f"<_root>{content}</_root>"
+
         # Try to parse as XML
         try:
-            ET.fromstring(content)
+            ET.fromstring(wrapped)
         except ET.ParseError as e:
             errors.append(f"XML syntax error: {str(e)}")
     
@@ -65,16 +69,20 @@ def check_custom_rules(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Wrap content in a dummy root element to handle question.html files
+        # that may have multiple top-level elements (no single document root).
+        wrapped = f"<_root>{content}</_root>"
+
         # Try to parse the file as XML
         try:
-            tree = ET.fromstring(content)
+            tree = ET.fromstring(wrapped)
         except ET.ParseError:
             # If XML parsing fails, we can't check custom rules
             # The XML syntax error will be caught by check_xml_syntax
             return errors
         
         # Rule: <pl-multiple-choice> must NOT be nested inside another element
-        # It must be the root element (have no parent)
+        # It must be a top-level element of the document (not nested)
         def check_pl_multiple_choice_nesting(element, is_root=True):
             """Recursively check if pl-multiple-choice is properly placed."""
             local_errors = []
@@ -92,8 +100,10 @@ def check_custom_rules(file_path):
             
             return local_errors
         
-        # Check the rule starting from the root
-        errors.extend(check_pl_multiple_choice_nesting(tree, True))
+        # The dummy wrapper's direct children are the real top-level elements,
+        # so treat each of them as a root when checking nesting rules.
+        for top_level in tree:
+            errors.extend(check_pl_multiple_choice_nesting(top_level, True))
     
     except FileNotFoundError:
         errors.append(f"File not found: {file_path}")
