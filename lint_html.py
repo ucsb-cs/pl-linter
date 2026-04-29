@@ -194,11 +194,13 @@ def main():
         print()
     
     # If command line arguments are provided, treat each as a directory to scan.
-    # Otherwise fall back to the default behavior (GITHUB_WORKSPACE env var or ".").
+    # Otherwise fall back to the default behavior (questions/ subdirectory of
+    # GITHUB_WORKSPACE env var or ".").
     if sys.argv[1:]:
         search_dirs = sys.argv[1:]
     else:
-        search_dirs = [os.getenv("GITHUB_WORKSPACE", ".")]
+        workspace = os.getenv("GITHUB_WORKSPACE", ".")
+        search_dirs = [os.path.join(workspace, "questions")]
     
     html_files = []
     for search_dir in search_dirs:
