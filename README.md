@@ -79,8 +79,15 @@ In test mode:
 To run the linter locally in normal mode (all files must pass):
 
 ```bash
+# Lint the entire repository (uses current directory or GITHUB_WORKSPACE)
 python3 lint_html.py
+
+# Lint one or more specific directories
+python3 lint_html.py questions/
+python3 lint_html.py questions/q1 questions/q2
 ```
+
+When one or more directory paths are provided as command-line arguments, the script scans each of those directories for HTML files instead of the default root. This allows you to lint a subset of a PrairieLearn repository (e.g., a single question folder) without scanning the entire repo.
 
 ### Test Mode
 
@@ -91,7 +98,7 @@ TEST_MODE=true EXPECTED_FAILURES="example_invalid.html,example_pl_invalid.html" 
 ```
 
 The script will:
-1. Find all `.html` and `.HTML` files in the repository (excluding `.git` directory)
+1. Find all `.html` and `.HTML` files in the specified directories (or the repository root if none are given), excluding the `.git` directory
 2. Validate each file for XML syntax
 3. Apply any custom PL-specific rules
 4. Report errors with line numbers and descriptions

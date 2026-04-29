@@ -134,9 +134,6 @@ def lint_file(file_path):
 
 def main():
     """Main entry point for the linter."""
-    # Get the repository root directory
-    repo_root = os.getenv("GITHUB_WORKSPACE", ".")
-    
     # Check if we're in test mode
     test_mode = os.getenv("TEST_MODE", "").lower() in ["true", "1", "yes"]
     expected_failures_str = os.getenv("EXPECTED_FAILURES", "")
@@ -148,8 +145,23 @@ def main():
         print(f"🧪 TEST MODE: Expecting these files to fail: {', '.join(sorted(expected_failures))}")
         print()
     
-    print(f"Scanning for HTML files in: {repo_root}")
-    html_files = find_html_files(repo_root)
+    # If command line arguments are provided, treat each as a directory to scan.
+    # Otherwise fall back to the default behavior (GITHUB_WORKSPACE env var or ".").
+    if sys.argv[1:]:
+        search_dirs = sys.argv[1:]
+    else:
+        search_dirs = [os.getenv("GITHUB_WORKSPACE", ".")]
+    
+    html_files = []
+    for search_dir in search_dirs:
+        if not os.path.isdir(search_dir):
+            print(f"❌ Error: '{search_dir}' is not a valid directory.")
+            return 1
+        print(f"Scanning for HTML files in: {search_dir}")
+        html_files.extend(find_html_files(search_dir))
+    
+    # Deduplicate while preserving sorted order (in case directories overlap)
+    html_files = sorted(set(html_files))
     
     if not html_files:
         print("No HTML files found.")
