@@ -18,10 +18,11 @@ from xml.etree import ElementTree as ET
 # djlint rules that are not applicable to PrairieLearn HTML fragments:
 #   H005 - html tag lang attribute (fragments don't need it)
 #   H007 - DOCTYPE declaration (fragments don't need it)
+#   H014 - extra blank lines (cosmetic, not an error)
 #   H030 - meta description (fragments don't need it)
 #   H031 - meta keywords (fragments don't need it)
 #   T001 - mustache variable whitespace style (cosmetic, not an error)
-_DJLINT_IGNORE = "H005,H007,H030,H031,T001"
+_DJLINT_IGNORE = "H005,H007,H014,H030,H031,T001"
 
 
 def find_html_files(root_dir="."):
