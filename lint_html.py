@@ -41,7 +41,8 @@ def check_xml_syntax(file_path):
         
         # Wrap content in a dummy root element to handle question.html files
         # that may have multiple top-level elements (no single document root).
-        wrapped = f"<_root>{content}</_root>"
+        # The unique tag name avoids collisions with real content.
+        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
 
         # Try to parse as XML
         try:
@@ -71,7 +72,8 @@ def check_custom_rules(file_path):
         
         # Wrap content in a dummy root element to handle question.html files
         # that may have multiple top-level elements (no single document root).
-        wrapped = f"<_root>{content}</_root>"
+        # The unique tag name avoids collisions with real content.
+        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
 
         # Try to parse the file as XML
         try:
@@ -83,25 +85,25 @@ def check_custom_rules(file_path):
         
         # Rule: <pl-multiple-choice> must NOT be nested inside another element
         # It must be a top-level element of the document (not nested)
-        def check_pl_multiple_choice_nesting(element, is_root=True):
+        def check_pl_multiple_choice_nesting(element, is_top_level=True):
             """Recursively check if pl-multiple-choice is properly placed."""
             local_errors = []
             
-            if element.tag == 'pl-multiple-choice' and not is_root:
-                # pl-multiple-choice found but it's not the root element
+            if element.tag == 'pl-multiple-choice' and not is_top_level:
+                # pl-multiple-choice found but it's not a top-level element
                 local_errors.append(
                     f"<pl-multiple-choice> element must not be nested inside other elements. "
                     f"It must be the root element of the document."
                 )
             
-            # Recursively check children (they are not root)
+            # Recursively check children (they are not top-level)
             for child in element:
                 local_errors.extend(check_pl_multiple_choice_nesting(child, False))
             
             return local_errors
         
         # The dummy wrapper's direct children are the real top-level elements,
-        # so treat each of them as a root when checking nesting rules.
+        # so treat each of them as top-level when checking nesting rules.
         for top_level in tree:
             errors.extend(check_pl_multiple_choice_nesting(top_level, True))
     
