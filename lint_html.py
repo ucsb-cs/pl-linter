@@ -22,7 +22,9 @@ from xml.etree import ElementTree as ET
 #   H030 - meta description (fragments don't need it)
 #   H031 - meta keywords (fragments don't need it)
 #   T001 - mustache variable whitespace style (cosmetic, not an error)
-_DJLINT_IGNORE = "H005,H007,H014,H030,H031,T001"
+#   H023 - this rules checks for entity references (but we allow those in PL HTML)
+#   H021 - this rule checks for inline styles (but we allow those in PL HTML)
+_DJLINT_IGNORE = "H005,H007,H014,H030,H031,T001,H023,H021"
 
 
 def find_html_files(root_dir="."):
