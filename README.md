@@ -6,7 +6,7 @@ This repository contains a linter for PL (PrairieLearn) HTML files.
 
 The linter checks HTML files for:
 
-1. **XML Syntax Validation**: Ensures that HTML files have valid XML syntax, including:
+1. **HTML/Template Syntax Validation**: Uses [djlint](https://djlint.com/) with the mustache profile to validate HTML structure while correctly handling `{{ mustache }}` template expressions found in PrairieLearn question files. This includes:
    - Properly formatted tags
    - Properly nested elements
    - Correct attribute syntax
@@ -99,7 +99,7 @@ TEST_MODE=true EXPECTED_FAILURES="example_invalid.html,example_pl_invalid.html" 
 
 The script will:
 1. Find all `.html` and `.HTML` files in the specified directories (or the repository root if none are given), excluding the `.git` directory
-2. Validate each file for XML syntax
+2. Validate each file using djlint (mustache template aware)
 3. Apply any custom PL-specific rules
 4. Report errors with line numbers and descriptions
 
@@ -118,13 +118,16 @@ The script will:
 The repository includes example HTML files to demonstrate the linter's functionality:
 
 - `example.html` - A valid HTML file that passes all checks
-- `example_invalid.html` - An invalid HTML file with mismatched tags (XML syntax error)
+- `example_invalid.html` - An invalid HTML file with mismatched tags (structural error)
 - `example_pl_valid.html` - A valid PrairieLearn file with `<pl-multiple-choice>` as root element
 - `example_pl_invalid.html` - An invalid PrairieLearn file with nested `<pl-multiple-choice>` element
+- `example_question.html` - A valid PrairieLearn question fragment
+- `example_pl_invalid_mustache.html` - An invalid PrairieLearn file that uses mustache templates (`{{ params.x }}`) and has a nested `<pl-multiple-choice>` element; demonstrates that the linter catches custom-rule violations even in template-heavy files
 
 ## Requirements
 
-- Python 3.x (uses standard library modules)
+- Python 3.x
+- [djlint](https://djlint.com/) (`pip install djlint`, or `pip install -r requirements.txt`)
 
 ## Extending the Linter
 

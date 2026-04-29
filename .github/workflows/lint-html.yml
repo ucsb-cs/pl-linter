@@ -28,13 +28,18 @@ jobs:
         with:
           repository: ucsb-cs/pl-linter
           path: .pl-linter
-          sparse-checkout: lint_html.py
+          sparse-checkout: |
+            lint_html.py
+            requirements.txt
           sparse-checkout-cone-mode: false
       
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.x'
+      
+      - name: Install dependencies
+        run: pip install -r .pl-linter/requirements.txt
       
       - name: Run HTML linter
         env:

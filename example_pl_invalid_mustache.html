@@ -1,0 +1,10 @@
+<pl-question-panel>
+  <p>What is {{ params.a }} + {{ params.b }}?</p>
+  <div class="hint">
+    <pl-multiple-choice answers-name="answer">
+      <pl-answer correct="true">{{ params.correct }}</pl-answer>
+      <pl-answer correct="false">{{ params.wrong1 }}</pl-answer>
+      <pl-answer correct="false">{{ params.wrong2 }}</pl-answer>
+    </pl-multiple-choice>
+  </div>
+</pl-question-panel>

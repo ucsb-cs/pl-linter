@@ -15,4 +15,4 @@ jobs:
     uses: ./.github/workflows/lint-html.yml
     with:
       test-mode: true
-      expected-failures: 'example_invalid.html,example_pl_invalid.html'
+      expected-failures: 'example_invalid.html,example_pl_invalid.html,example_pl_invalid_mustache.html'
