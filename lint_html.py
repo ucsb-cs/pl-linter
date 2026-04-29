@@ -39,9 +39,14 @@ def check_xml_syntax(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Wrap content in a dummy root element to handle question.html files
+        # that may have multiple top-level elements (no single document root).
+        # The unique tag name avoids collisions with real content.
+        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
+
         # Try to parse as XML
         try:
-            ET.fromstring(content)
+            ET.fromstring(wrapped)
         except ET.ParseError as e:
             errors.append(f"XML syntax error: {str(e)}")
     
@@ -65,35 +70,42 @@ def check_custom_rules(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Wrap content in a dummy root element to handle question.html files
+        # that may have multiple top-level elements (no single document root).
+        # The unique tag name avoids collisions with real content.
+        wrapped = f"<pl-linter-root>{content}</pl-linter-root>"
+
         # Try to parse the file as XML
         try:
-            tree = ET.fromstring(content)
+            tree = ET.fromstring(wrapped)
         except ET.ParseError:
             # If XML parsing fails, we can't check custom rules
             # The XML syntax error will be caught by check_xml_syntax
             return errors
         
         # Rule: <pl-multiple-choice> must NOT be nested inside another element
-        # It must be the root element (have no parent)
-        def check_pl_multiple_choice_nesting(element, is_root=True):
+        # It must be a top-level element of the document (not nested)
+        def check_pl_multiple_choice_nesting(element, is_top_level=True):
             """Recursively check if pl-multiple-choice is properly placed."""
             local_errors = []
             
-            if element.tag == 'pl-multiple-choice' and not is_root:
-                # pl-multiple-choice found but it's not the root element
+            if element.tag == 'pl-multiple-choice' and not is_top_level:
+                # pl-multiple-choice found but it's not a top-level element
                 local_errors.append(
                     f"<pl-multiple-choice> element must not be nested inside other elements. "
-                    f"It must be the root element of the document."
+                    f"It must be a top-level element of the document."
                 )
             
-            # Recursively check children (they are not root)
+            # Recursively check children (they are not top-level)
             for child in element:
                 local_errors.extend(check_pl_multiple_choice_nesting(child, False))
             
             return local_errors
         
-        # Check the rule starting from the root
-        errors.extend(check_pl_multiple_choice_nesting(tree, True))
+        # The dummy wrapper's direct children are the real top-level elements,
+        # so treat each of them as top-level when checking nesting rules.
+        for top_level in tree:
+            errors.extend(check_pl_multiple_choice_nesting(top_level, True))
     
     except FileNotFoundError:
         errors.append(f"File not found: {file_path}")
