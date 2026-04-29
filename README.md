@@ -12,7 +12,7 @@ The linter checks HTML files for:
    - Correct attribute syntax
 
 2. **PrairieLearn-Specific Rules**:
-   - `<pl-multiple-choice>` elements must be the root element of the document (not nested inside any other element)
+   - `<pl-multiple-choice>` elements must not be nested inside any element whose tag starts with `pl-` (e.g. they must not appear inside `<pl-question-panel>` or similar PrairieLearn elements)
 
 3. **Extensible Framework**: Additional custom validation rules can be easily added
 
@@ -120,7 +120,7 @@ The repository includes example HTML files to demonstrate the linter's functiona
 - `example.html` - A valid HTML file that passes all checks
 - `example_invalid.html` - An invalid HTML file with mismatched tags (structural error)
 - `example_pl_valid.html` - A valid PrairieLearn file with `<pl-multiple-choice>` as root element
-- `example_pl_invalid.html` - An invalid PrairieLearn file with nested `<pl-multiple-choice>` element
+- `example_pl_invalid.html` - An invalid PrairieLearn file with `<pl-multiple-choice>` nested inside a `<pl-question-panel>` element
 - `example_question.html` - A valid PrairieLearn question fragment
 - `example_pl_invalid_mustache.html` - An invalid PrairieLearn file that uses mustache templates (`{{ params.x }}`) and has a nested `<pl-multiple-choice>` element; demonstrates that the linter catches custom-rule violations even in template-heavy files
 
